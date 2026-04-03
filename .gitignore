@@ -101,3 +101,5 @@ celerybeat.pid
 # OS
 .DS_Store
 Thumbs.db
+
+README_GITHUB.md
