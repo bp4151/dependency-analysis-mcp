@@ -1,5 +1,7 @@
 # Dependency Analysis MCP
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{owner}/{repo}/badge)](https://scorecard.dev/viewer/?uri=github.com/{owner}/{repo})
+
 A **[Model Context Protocol](https://modelcontextprotocol.io/)** server built with [FastMCP](https://github.com/PrefectHQ/fastmcp) that helps agents and developers **inspect open-source dependencies**: registry metadata, GitHub release alignment, public security signals, and version-pinning posture across many ecosystems.
 
 **Python 3.11+** · Package name: `dependencyanalysismcp` (see `pyproject.toml`)
