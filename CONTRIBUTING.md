@@ -16,7 +16,7 @@ If this repository later adopts a formal **Code of Conduct** (for example Contri
 
 1. **Search existing issues and pull requests** so you do not duplicate work.
 2. **Discuss large changes** (new tools, breaking behavior, or broad refactors) in an issue first unless the maintainer has already agreed on direction.
-3. **Security issues** — do **not** open a public issue for exploitable vulnerabilities. Use [GitHub private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) for this repository if it is enabled, or contact the maintainers through a private channel. See also **[README_GITHUB.md](README_GITHUB.md)** for security-policy expectations.
+3. **Security issues** — follow **[SECURITY.md](SECURITY.md)**. Do **not** open a public issue for exploitable vulnerabilities. See also **[README_GITHUB.md](README_GITHUB.md)** for broader GitHub security expectations.
 
 ---
 

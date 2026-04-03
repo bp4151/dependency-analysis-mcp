@@ -51,6 +51,7 @@ Optional: set **`GITHUB_TOKEN`** in the environment for higher GitHub API rate l
 | **[README_Inspector.md](README_Inspector.md)** | Debugging with MCP Inspector (stdio and HTTP) |
 | **[README_GITHUB.md](README_GITHUB.md)** | GitHub and OpenSSF-oriented practices for open source repos |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute: setup, PRs, docs, security reporting |
+| **[SECURITY.md](SECURITY.md)** | How to report vulnerabilities privately (coordinated disclosure) |
 
 ---
 
