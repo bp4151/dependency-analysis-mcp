@@ -1,6 +1,6 @@
 # Dependency Analysis MCP
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/{owner}/{repo}/badge)](https://scorecard.dev/viewer/?uri=github.com/{owner}/{repo})
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/bp4151/dependency-analysis-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/bp4151/dependency-analysis-mcp)
 
 A **[Model Context Protocol](https://modelcontextprotocol.io/)** server built with [FastMCP](https://github.com/PrefectHQ/fastmcp) that helps agents and developers **inspect open-source dependencies**: registry metadata, GitHub release alignment, public security signals, and version-pinning posture across many ecosystems.
 
