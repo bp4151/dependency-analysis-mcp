@@ -1,5 +1,7 @@
 # Dependency Analysis MCP
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/bp4151/dependency-analysis-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/bp4151/dependency-analysis-mcp)
+
 A **[Model Context Protocol](https://modelcontextprotocol.io/)** server built with [FastMCP](https://github.com/PrefectHQ/fastmcp) that helps agents and developers **inspect open-source dependencies**: registry metadata, GitHub release alignment, public security signals, and version-pinning posture across many ecosystems.
 
 **Python 3.11+** · Package name: `dependencyanalysismcp` (see `pyproject.toml`)
@@ -51,6 +53,7 @@ Optional: set **`GITHUB_TOKEN`** in the environment for higher GitHub API rate l
 | **[README_Inspector.md](README_Inspector.md)** | Debugging with MCP Inspector (stdio and HTTP) |
 | **[README_GITHUB.md](README_GITHUB.md)** | GitHub and OpenSSF-oriented practices for open source repos |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to contribute: setup, PRs, docs, security reporting |
+| **[SECURITY.md](SECURITY.md)** | How to report vulnerabilities privately (coordinated disclosure) |
 
 ---
 

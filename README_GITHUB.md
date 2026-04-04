@@ -45,6 +45,87 @@ OpenSSF and industry guidance stress **not** fixing serious issues only in silen
 
 These map closely to Scorecard checks such as **Branch-Protection** and **Code-Review**.
 
+### Branch layout and workflow (best practices)
+
+| Practice | Notes |
+|----------|--------|
+| **Default branch (`main` / `master`)** | Treat as the **integration line**: reviewed, CI-clean work lands here. Protect it; prefer **PR + merge** over direct pushes for contributors. |
+| **Topic branches** | One logical change when possible. Name clearly: `fix/…`, `feat/…`, `docs/…`, `chore/…`, or `issue-123-short-slug`. Branch from an **up-to-date** default branch. |
+| **After merge** | Delete remote topic branches to reduce clutter (GitHub: *Automatically delete head branches*). |
+| **Release branches** | Optional **`release/x.y`** (or similar) when you must **patch older lines** while default moves forward. Ship from **tags** (`v1.2.3`) with release notes. |
+| **Long-lived `develop`** | Optional second integration branch (develop → default). Many small OSS projects skip this and use only the default branch. |
+| **Docs / Pages** | **`gh-pages`** or a **docs** branch only if your publishing model needs it; otherwise keep docs on the default branch (or publish via Actions from default). |
+| **Automation** | Treat **Dependabot** (and similar) PRs like other contributions: review and merge through the same protections. |
+| **Avoid** | Force-pushing **shared** branches without agreement; one eternal branch for many unrelated features; **secrets** on any branch (use secrets / env, not commits). |
+
+### GitHub branch protections (detailed reference)
+
+GitHub implements protections through **classic branch protection rules** (per branch pattern) and **rulesets** (targets, bypass lists, enforcement). Labels in the UI can change slightly; the capabilities below are the ones teams usually configure.
+
+#### Classic branch protection rules
+
+**Pull requests**
+
+| Option | Effect |
+|--------|--------|
+| **Require a pull request before merging** | Changes to the branch must go through a PR (subject to bypass lists, if any). |
+| **Required approving review count** | e.g. one or two approvals before merge. |
+| **Dismiss stale pull request approvals when new commits are pushed** | Prior approvals do not count after new commits on the PR branch. |
+| **Require review from Code Owners** | Uses **`CODEOWNERS`** so relevant owners approve touched paths. |
+| **Restrict who can dismiss pull request reviews** | Limits who can clear review state. |
+| **Require approval of the most recent reviewable push** | When enabled, adds a check that the latest push was reviewed (stricter workflow). |
+
+**Status checks**
+
+| Option | Effect |
+|--------|--------|
+| **Require status checks to pass before merging** | Selected CI checks must succeed. |
+| **Require branches to be up to date before merging** | PR branch must incorporate latest default before merge (stricter than “green on last push”). |
+
+**Conversation, history, queue**
+
+| Option | Effect |
+|--------|--------|
+| **Require conversation resolution before merging** | All review threads must be resolved. |
+| **Require linear history** | Enforces a linear graph (policy depends on allowed merge methods: squash/rebase/restrict merge commits). |
+| **Require merge queue** | Merges go through a queue that re-validates against the latest default (useful for busy repos). |
+
+**Integrity and lifecycle**
+
+| Option | Effect |
+|--------|--------|
+| **Require signed commits** | Only verified (GPG/SSH) commits allowed, when you enforce signing. |
+| **Lock branch** | Branch becomes read-only (emergency or archive scenarios). |
+| **Restrict who can push to matching branches** | Narrows who may push directly (often **no one** on default). |
+
+**Risky exceptions (usually off on default)**
+
+| Option | Effect |
+|--------|--------|
+| **Allow force pushes** | If on, typically limited to specific roles; usually **off** on default. |
+| **Allow deletions** | Usually **off** on default. |
+| **Bypass rules** | Prefer **enforcing the same rules for administrators** when your threat model allows—so admins cannot silently bypass protection. |
+
+#### Rulesets (repository or organization)
+
+**Rulesets** attach **rules** to **targets** (branch names, tags, refs) with explicit **enforcement** (active, evaluate/audit, disabled) and **bypass** actors.
+
+Common rule types include:
+
+- Restrict or block **creation**, **update**, or **deletion** of matching refs.
+- **Require a pull request** (with required reviews, Code Owners, etc.).
+- **Required status checks** (and optional “up to date” behavior).
+- **Require linear history** / **merge queue** (depending on configuration).
+- **Require signed commits**.
+- **Block force pushes** explicitly.
+- **Require deployments** to succeed (environment gates) before merge, when configured.
+
+Use **rulesets** when you need consistent policy across many branches or repos; use **classic rules** when a single branch pattern is enough.
+
+#### Practical default for public OSS
+
+On the **default branch**: require PRs, **≥1** approval, **dismiss stale reviews**, **required CI checks**, **up to date** if you can afford the friction, **no force-push**, **no branch delete**, admins **not** bypassing when feasible. Add **merge queue** or **signed commits** as the project matures.
+
 ---
 
 ## 4. Dependencies and automated updates
