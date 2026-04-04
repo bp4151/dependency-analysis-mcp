@@ -6,18 +6,19 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 dependencies = [
-    "fastmcp>=3.0.0",
-    "httpx>=0.27.0",
-    "packaging>=24.0",
-    "cvss>=3.0",
-    "pyyaml>=6.0",
+    "beautifulsoup4==4.14.3",
+    "fastmcp==3.1.0",
+    "httpx==0.28.1",
+    "packaging==25.0",
+    "cvss==3.6",
+    "pyyaml==6.0.3",
 ]
 
 [project.scripts]
 dependency-analysis-mcp = "dependency_analysis_mcp.server:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.29.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

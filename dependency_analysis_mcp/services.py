@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import quote, unquote, urlparse
 
 import httpx
+from bs4 import BeautifulSoup
 from cvss import CVSS3, CVSS4
 from cvss.exceptions import CVSSError
 from packaging.version import InvalidVersion, Version
@@ -236,11 +237,11 @@ def parse_github_repo(repository_url: str) -> tuple[str, str]:
 
 
 def strip_html_to_text(html: str) -> str:
-    html = re.sub(
-        r"<script\b[^>]*>[\s\S]*?</script>", " ", html, flags=re.I
-    )
-    text = re.sub(r"<[^>]+>", " ", html)
-    return re.sub(r"\s+", " ", text).strip()
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator=" ")
+    return " ".join(text.split()).strip()
 
 
 def pick_latest_semver(versions: list[str], prefer_stable: bool = True) -> str | None:
@@ -606,11 +607,151 @@ async def check_release_sync(
 
 def snyk_package_url(package_type: str, package_name: str) -> str:
     pt = normalize_package_type(package_type)
-    segment = {"npm": "npm", "pypi": "pip", "nuget": "nuget"}.get(pt)
+    segment = {
+        "npm": "npm",
+        "pypi": "pip",
+        "nuget": "nuget",
+        "maven": "maven",
+        "cocoapods": "cocoapods",
+        "composer": "composer",
+        "golang": "golang",
+        "go": "golang",
+        "rubygems": "rubygems",
+        "ruby": "rubygems",
+        "unmanaged": "unmanaged",
+        "cargo": "cargo",
+        "rust": "cargo",
+        "swift": "swift",
+        "hex": "hex",
+        "elixir": "hex",
+        "pub": "pub",
+        "dart": "pub",
+        "conan": "conan",
+    }.get(pt)
     if not segment:
-        raise ValueError("Snyk public pages support npm, pypi, and nuget for this tool.")
+        raise ValueError(
+            "Unsupported package_type for Snyk package URL. "
+            "Use npm, pypi/pip, nuget, maven, cocoapods, composer, golang/go, "
+            "rubygems/ruby, unmanaged, cargo/rust, swift, hex/elixir, pub/dart, or conan."
+        )
     enc = quote(package_name, safe="@")
     return f"https://security.snyk.io/package/{segment}/{enc}"
+
+
+def _snyk_criterion_badges(ph: Any) -> dict[str, dict[str, str | None]]:
+    """Parse package-health criterion rows (label + assessment badge)."""
+    out: dict[str, dict[str, str | None]] = {}
+    if ph is None:
+        return out
+    for li in ph.select("li.criterion-item"):
+        lab = li.select_one(".criterion-label")
+        badge = li.select_one(".criterion-badge")
+        if lab is None or badge is None:
+            continue
+        key = lab.get_text(strip=True).lower()
+        if not key:
+            continue
+        classes = badge.get("class") or []
+        level: str | None = None
+        if "badge--success" in classes:
+            level = "success"
+        elif "badge--warn" in classes:
+            level = "warn"
+        elif "badge--danger" in classes:
+            level = "danger"
+        out[key] = {
+            "assessment": badge.get_text(strip=True),
+            "level": level,
+        }
+    return out
+
+
+def _snyk_dim_markdown(dim: Any) -> str:
+    if not isinstance(dim, dict):
+        return "—"
+    assessment = dim.get("assessment")
+    level = dim.get("level")
+    if not assessment:
+        return "—"
+    if level:
+        return f"{assessment} ({level})"
+    return str(assessment)
+
+
+def _parse_snyk_advisor_soup(soup: BeautifulSoup) -> dict[str, Any]:
+    """Extract advisor fields from parsed security.snyk.io package HTML."""
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    out: dict[str, Any] = {
+        "package_name_parsed": None,
+        "package_type_parsed": None,
+        "package_health_score": None,
+        "latest_version_reported": None,
+        "security_issues_flag": None,
+        "no_vulns_latest_wording_found": False,
+        "maintenance": None,
+        "community": None,
+        "popularity": None,
+    }
+
+    h1 = soup.select_one(".package-heading h1.title")
+    if h1:
+        name = h1.get_text(strip=True)
+        if name:
+            out["package_name_parsed"] = name
+
+    bc_links = soup.select("nav.breadcrumbs a.breadcrumbs__url")
+    if len(bc_links) >= 2:
+        eco = bc_links[1].get_text(strip=True)
+        if eco:
+            out["package_type_parsed"] = normalize_package_type(eco)
+
+    score_el = soup.select_one(".package-health .score-number")
+    if score_el:
+        raw = score_el.get_text(strip=True)
+        if "/" in raw:
+            left = raw.split("/", 1)[0].strip()
+            if left.isdigit():
+                out["package_health_score"] = int(left)
+
+    for item in soup.select(".package-heading .metadata-item"):
+        line = item.get_text(" ", strip=True)
+        low = line.lower()
+        if low.startswith("latest version:"):
+            out["latest_version_reported"] = line.split(":", 1)[1].strip()
+            break
+
+    ph = soup.select_one(".package-health")
+    if ph is not None:
+        security_issues: bool | None = None
+        for badge in ph.select(".badge"):
+            t = badge.get_text(" ", strip=True).lower()
+            if "security" not in t:
+                continue
+            if "no known security" in t:
+                security_issues = False
+                break
+            if "security issues found" in t:
+                security_issues = True
+                break
+        out["security_issues_flag"] = security_issues
+
+        criteria = _snyk_criterion_badges(ph)
+        for dim in ("maintenance", "community", "popularity"):
+            out[dim] = criteria.get(dim)
+
+    needle = "no vulnerabilities found in the latest version"
+    for root in (
+        soup.select_one(".package-heading"),
+        soup.select_one(".package-health"),
+        soup.select_one(".dependencies-container"),
+    ):
+        if root is not None and needle in root.get_text(" ", strip=True).lower():
+            out["no_vulns_latest_wording_found"] = True
+            break
+
+    return out
 
 
 async def fetch_snyk_advisor_page(
@@ -619,29 +760,21 @@ async def fetch_snyk_advisor_page(
     url = snyk_package_url(package_type, package_name)
     r = await client.get(url, follow_redirects=True)
     r.raise_for_status()
-    text = strip_html_to_text(r.text)
-    health_m = re.search(
-        r"Package Health Score\D*(\d{1,3})\s*/\s*100", text, re.I
-    )
-    latest_m = re.search(
-        r"Latest version:\s*([A-Za-z0-9._+\-]+)", text, re.I
-    )
-    security_issues = None
-    if re.search(r"NO KNOWN SECURITY ISSUES", text, re.I):
-        security_issues = False
-    elif re.search(r"SECURITY ISSUES FOUND", text, re.I):
-        security_issues = True
-    nvuln_m = re.search(
-        r"No vulnerabilities found in the latest version", text, re.I
-    )
+    soup = BeautifulSoup(r.text, "html.parser")
+    parsed = _parse_snyk_advisor_soup(soup)
+    pt = parsed["package_type_parsed"] or normalize_package_type(package_type)
+    name = parsed["package_name_parsed"] or package_name
     return {
-        "package_name": package_name,
-        "package_type": normalize_package_type(package_type),
+        "package_name": name,
+        "package_type": pt,
         "snyk_package_url": url,
-        "package_health_score": int(health_m.group(1)) if health_m else None,
-        "latest_version_reported": latest_m.group(1) if latest_m else None,
-        "security_issues_flag": security_issues,
-        "no_vulns_latest_wording_found": bool(nvuln_m),
+        "package_health_score": parsed["package_health_score"],
+        "latest_version_reported": parsed["latest_version_reported"],
+        "security_issues_flag": parsed["security_issues_flag"],
+        "no_vulns_latest_wording_found": parsed["no_vulns_latest_wording_found"],
+        "maintenance": parsed["maintenance"],
+        "community": parsed["community"],
+        "popularity": parsed["popularity"],
         "note": (
             "Fields are parsed from the public security.snyk.io HTML and may be incomplete "
             "if the page layout changes."
@@ -779,6 +912,9 @@ async def dependency_health_summary(
         f"- Package health score: **{snyk.get('package_health_score')}**/100",
         f"- Latest version (page): **{snyk.get('latest_version_reported')}**",
         f"- Security issues flag (page): **{snyk.get('security_issues_flag')}**",
+        f"- Maintenance: **{_snyk_dim_markdown(snyk.get('maintenance'))}**",
+        f"- Community: **{_snyk_dim_markdown(snyk.get('community'))}**",
+        f"- Popularity: **{_snyk_dim_markdown(snyk.get('popularity'))}**",
         "",
         "### Critical security (OSV, last {recent_crit['window_days']} days)",
         f"- New **critical** disclosures (by publish date): **{recent_crit['critical_disclosures_count']}**",
