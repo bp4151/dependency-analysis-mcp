@@ -7,6 +7,7 @@ import os
 
 import httpx
 from fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -28,11 +29,15 @@ mcp = FastMCP(
         "Tools compare package registry versions to GitHub releases, read Snyk Advisor-style "
         "signals from public security.snyk.io pages, query the OpenSSF Scorecard API, "
         "check OSV for critical vulnerabilities and recent advisory activity (30-day window), "
-        "attach OWASP third-party dependency guidance and Top 10 links in the summary, "
+        "attach OWASP third-party dependency guidance (Vulnerable Dependency Management, NPM Security) "
+        "and Top 10 links in the summary, "
         "resolve GitHub URLs from package metadata, scan local manifests for loose/unpinned "
         "dependencies, and merge results into a short summary."
     ),
 )
+
+_READ_ONLY_OPEN_WORLD = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
+_READ_ONLY_LOCAL = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -41,7 +46,7 @@ async def _health(_request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def find_package_github_repository(
     package_name: str,
     package_type: str,
@@ -67,7 +72,7 @@ async def find_package_github_repository(
         return await resolve_package_github_repository(client, package_name, package_type)
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def check_package_release_sync(
     package_name: str,
     package_type: str,
@@ -92,7 +97,7 @@ async def check_package_release_sync(
         return await check_release_sync(client, package_name, package_type, repository_url)
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def check_snyk_advisor_package(
     package_name: str,
     package_type: str,
@@ -116,7 +121,7 @@ async def check_snyk_advisor_package(
         return await fetch_snyk_advisor_page(client, package_name, package_type)
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def check_recent_critical_vulnerabilities(
     package_name: str,
     package_type: str,
@@ -146,7 +151,7 @@ async def check_recent_critical_vulnerabilities(
         )
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def check_openssf_scorecard(
     repository_url: str,
 ) -> dict:
@@ -166,7 +171,7 @@ async def check_openssf_scorecard(
         return await fetch_openssf_scorecard(client, repository_url)
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_LOCAL)
 async def check_dependency_version_pinning(
     search_root: str = ".",
     max_depth: int = 8,
@@ -195,7 +200,7 @@ async def check_dependency_version_pinning(
     return await asyncio.to_thread(scan_dependency_pinning, search_root, max_depth)
 
 
-@mcp.tool
+@mcp.tool(annotations=_READ_ONLY_OPEN_WORLD)
 async def create_dependency_analysis_summary(
     package_name: str,
     package_type: str,
@@ -213,7 +218,7 @@ async def create_dependency_analysis_summary(
     Returns:
         ``markdown`` narrative and structured ``release_sync``, ``snyk_advisor``,
         ``openssf_scorecard``, ``recent_critical_security``, and
-        ``owasp_dependency_guidance`` (practices, OWASP cheat sheet + Top 10 A06 links, live excerpt when available).
+        ``owasp_dependency_guidance`` (practices, OWASP cheat sheet + NPM Security + Top 10 A06 links, live excerpt when available).
     """
     return await dependency_health_summary(package_name, package_type, repository_url)
 
