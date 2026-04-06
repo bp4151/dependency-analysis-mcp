@@ -103,3 +103,5 @@ celerybeat.pid
 Thumbs.db
 
 README_GITHUB.md
+
+.vscode/settings.json
