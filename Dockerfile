@@ -11,6 +11,8 @@ RUN python -m venv /app/venv \
 
 COPY pyproject.toml .
 COPY dependency_analysis_mcp ./dependency_analysis_mcp
+COPY LICENSE .
+COPY README.md .
 
 RUN /app/venv/bin/pip install --no-cache-dir .
 
